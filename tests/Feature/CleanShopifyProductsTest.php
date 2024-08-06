@@ -2,9 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Services\ShopifyApiService;
+use App\Services\Shopify\Facade\ShopifyApi;
 use Illuminate\Support\Facades\Artisan;
-use Mockery;
 use Tests\TestCase;
 
 
@@ -12,21 +11,18 @@ class CleanShopifyProductsTest extends TestCase
 {
     public function test_clean_shopify_products()
     {
-        $mockShopifyApiService = Mockery::mock(ShopifyApiService::class);
-        $this->app->instance(ShopifyApiService::class, $mockShopifyApiService);
-
-        $mockProducts = [
-            [
+        ShopifyApi::fake()
+            ->addProduct([
                 'id' => 1,
-                'title' => 'Product 1',
-                'body_html' => null,
+                'title' => 'Product 1', // should be modified to 'Product 1 - nullable'
+                'body_html' => null, // 'Description 1',
                 'vendor' => 'Vendor 1',
                 'product_type' => 'Type 1',
                 'variants' => [
                     ['id' => 101, 'inventory_item_id' => 1001, 'title' => 'Variant 1']
                 ]
-            ],
-            [
+            ])
+            ->addProduct([
                 'id' => 2,
                 'title' => 'Product 2',
                 'body_html' => 'Description 2',
@@ -35,8 +31,7 @@ class CleanShopifyProductsTest extends TestCase
                 'variants' => [
                     ['id' => 102, 'inventory_item_id' => 1002, 'title' => 'Variant 2']
                 ]
-            ],
-        ];
+            ]);
 
         $expectedCleanedProducts = [
             [
@@ -59,11 +54,6 @@ class CleanShopifyProductsTest extends TestCase
                 ]
             ],
         ];
-
-        $mockShopifyApiService->shouldReceive('getProducts')
-            ->once()
-            ->andReturn($mockProducts);
-
 
         Artisan::call('app:clean-shopify-products');
 

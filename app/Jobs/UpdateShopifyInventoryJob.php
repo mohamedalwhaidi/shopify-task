@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Services\ShopifyApiService;
+use App\Services\Shopify\Facade\ShopifyApi;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\ConnectionException;
@@ -13,20 +13,11 @@ class UpdateShopifyInventoryJob implements ShouldQueue
     use Queueable;
 
     private const STOCK_QUANTITY = 50;
-    public ShopifyApiService $shopifyService;
-
-    public function __construct()
-    {
-        $this->shopifyService = new ShopifyApiService();
-    }
 
 
-    /**
-     * @throws ConnectionException
-     */
     public function handle(): void
     {
-        $locations = $this->shopifyService->getInventoryLocations();
+        $locations = ShopifyApi::getInventoryLocations();
 
         if (empty($locations)) {
             Log::error('Failed to retrieve inventory locations');
@@ -34,7 +25,7 @@ class UpdateShopifyInventoryJob implements ShouldQueue
         }
 
         // TODO: user $page and $limit to fetch products
-        $products = $this->shopifyService->getProducts();
+        $products = ShopifyApi::getProducts();
 
         if (empty($products)) {
             return;
@@ -44,7 +35,12 @@ class UpdateShopifyInventoryJob implements ShouldQueue
             foreach ($product['variants'] as $variant) {
                 foreach ($locations as $location) {
                     try {
-                        $this->shopifyService->updateInventoryLevel($location['id'], $variant['inventory_item_id'], self::STOCK_QUANTITY, $product['id']);
+                        ShopifyApi::updateInventoryLevel(
+                            locationId: $location['id'],
+                            inventoryItemId: $variant['inventory_item_id'],
+                            quantity: self::STOCK_QUANTITY,
+                            productId: $product['id'],
+                        );
                     } catch (ConnectionException $e) {
                         Log::error($e->getMessage());
                         continue;

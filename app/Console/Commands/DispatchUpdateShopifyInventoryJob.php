@@ -3,9 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Jobs\UpdateShopifyInventoryJob;
-use App\Services\ShopifyApiService;
 use Illuminate\Console\Command;
-use Illuminate\Http\Client\ConnectionException;
 
 class DispatchUpdateShopifyInventoryJob extends Command
 {
@@ -22,13 +20,6 @@ class DispatchUpdateShopifyInventoryJob extends Command
      * @var string
      */
     protected $description = 'Dispatch jobs to update Shopify inventory levels to 50';
-
-    public function __construct(
-        public ShopifyApiService $shopifyService
-    )
-    {
-        parent::__construct();
-    }
 
     /**
      * Execute the console command.
