@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\ShopifyApiService;
+use App\Services\Shopify\Facade\ShopifyApi;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Log;
@@ -23,25 +23,19 @@ class CleanShopifyProducts extends Command
      */
     protected $description = 'Command description';
 
-    public function __construct(
-        public ShopifyApiService $shopifyService
-    )
-    {
-        parent::__construct();
-    }
-
     public function handle(): void
     {
         /**
          * In real scenario, we would use pagination to get paginated products
          * and clean them in chunks
-           but because the pagination is not work correctly, we will get all products
+         * but because the pagination is not work correctly, we will get all products
          * and we should use this code inside a job to avoid the timeout
          * but to print the result in terminal as you need in the task [Then console log the modified object as a string.]
          * we will use it here
          **/
         try {
-            $products = $this->shopifyService->getProducts();
+            $products = ShopifyApi::getProducts();
+
         } catch (ConnectionException $e) {
             $this->error($e->getMessage());
             return;

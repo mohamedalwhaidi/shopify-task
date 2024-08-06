@@ -2,14 +2,12 @@
 
 namespace App\Jobs;
 
-use App\Actions\CreateShopifyProductsAction;
-use App\Services\ShopifyApiService;
+use App\Services\Shopify\Facade\ShopifyApi;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use League\Csv\CannotInsertRecord;
@@ -27,14 +25,6 @@ class CreateShopifyProductsJob implements ShouldQueue
 
     private string $failedProductsPath = 'failed_products.csv';
 
-    public ShopifyApiService $shopifyService;
-
-    public function __construct()
-    {
-        $this->shopifyService = new ShopifyApiService();
-    }
-
-
     /**
      * Execute the job.
      */
@@ -49,7 +39,7 @@ class CreateShopifyProductsJob implements ShouldQueue
                     $productData = $this->removeEmptyValues($productData);
 
                     try {
-                        $response = $this->shopifyService->createProduct($productData);
+                        $response = ShopifyApi::createProduct($productData);
 
                         if ($response->created()) {
                             Log::info("Product created successfully: " . $productData['product']['title']);
