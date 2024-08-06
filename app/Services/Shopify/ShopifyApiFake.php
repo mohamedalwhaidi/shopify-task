@@ -2,12 +2,14 @@
 
 namespace App\Services\Shopify;
 
+use Exception;
 use Illuminate\Support\Collection;
 
 class ShopifyApiFake extends ShopifyApiService
 {
     private Collection $products;
     private Collection $locations;
+    private ?Exception $exception = null;
 
     public function __construct()
     {
@@ -28,18 +30,45 @@ class ShopifyApiFake extends ShopifyApiService
         return $this;
     }
 
+    public function setException(Exception $exception): self
+    {
+        $this->exception = $exception;
+        return $this;
+    }
+
+    /**
+     * @throws Exception
+     */
     public function getProducts(int $page = null, int $limit = null): array
     {
+        if ($this->exception) {
+            throw $this->exception;
+        }
+
         return $this->products->all();
     }
 
+    /**
+     * @throws Exception
+     */
     public function getInventoryLocations()
     {
+        if ($this->exception) {
+            throw $this->exception;
+        }
+
         return $this->locations->all();
     }
 
-    public function updateInventoryLevel($locationId, $inventoryItemId, $quantity, $productId): true
+    /**
+     * @throws Exception
+     */
+    public function updateInventoryLevel($locationId, $inventoryItemId, $quantity, $productId): bool
     {
+        if ($this->exception) {
+            throw $this->exception;
+        }
+
         // Simulate a successful update
         return true;
     }

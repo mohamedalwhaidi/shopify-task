@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\Shopify\Facade\ShopifyApi;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
@@ -58,5 +59,16 @@ class CleanShopifyProductsTest extends TestCase
         Artisan::call('app:clean-shopify-products');
 
         $this->assertEquals("The modified product is: " . json_encode($expectedCleanedProducts[0]) . "\n", Artisan::output());
+    }
+
+
+    public function testHandleWithException()
+    {
+        ShopifyApi::fake()
+            ->setException(new ConnectionException('Test exception'));
+
+        Artisan::call('app:clean-shopify-products');
+
+        $this->assertEquals("Test exception\n", Artisan::output());
     }
 }
