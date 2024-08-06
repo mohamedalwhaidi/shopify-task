@@ -55,8 +55,6 @@ class CleanShopifyProducts extends Command
                 Log::info('Cleaned product: ' . json_encode($cleanedProduct));
             });
         });
-
-        $this->info('Products cleaned and logged.');
     }
 
     private function cleanProduct(array $product): array
