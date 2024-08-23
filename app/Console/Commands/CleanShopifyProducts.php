@@ -27,10 +27,10 @@ class CleanShopifyProducts extends Command
     {
         /**
          * In real scenario, we would use pagination to get paginated products
-         * and clean them in chunks
-         * but because the pagination is not work correctly, we will get all products
+         * and clean them in chunks,
+         * but because the pagination is not work correctly, we will get all products,
          * and we should use this code inside a job to avoid the timeout
-         * but to print the result in terminal as you need in the task [Then console log the modified object as a string.]
+         * but to print the result in the terminal as you need in the task [Then console log the modified object as a string.]
          * we will use it here
          **/
         try {
