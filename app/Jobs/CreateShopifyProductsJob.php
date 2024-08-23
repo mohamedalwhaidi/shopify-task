@@ -12,8 +12,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use League\Csv\CannotInsertRecord;
 use League\Csv\Exception;
-use League\Csv\Reader;
-use League\Csv\Statement;
 use League\Csv\UnavailableStream;
 use League\Csv\Writer;
 
@@ -25,57 +23,41 @@ class CreateShopifyProductsJob implements ShouldQueue
 
     private string $failedProductsPath = 'failed_products.csv';
 
+    public function __construct(private readonly array $records)
+    {
+    }
+
     /**
      * Execute the job.
      */
     public function handle(): void
     {
         try {
-            $this->processCsvInChunks(function ($chunk) {
+            foreach ($this->records as $record) {
+                $productData = $this->prepareProductData($record);
 
-                foreach ($chunk as $record) {
-                    $productData = $this->prepareProductData($record);
+                $productData = $this->removeEmptyValues($productData);
 
-                    $productData = $this->removeEmptyValues($productData);
+                try {
+                    $response = ShopifyApi::createProduct($productData);
 
-                    try {
-                        $response = ShopifyApi::createProduct($productData);
-
-                        if ($response->created()) {
-                            Log::info("Product created successfully: " . $productData['product']['title']);
-                            $this->logProcessedRecord($record, $this->uploadedProductsPath);
-                        } else {
-                            Log::error("Failed to create product: " . $productData['product']['title']);
-                            $this->logProcessedRecord($record, $this->failedProductsPath);
-                        }
-                    } catch (\Exception $e) {
-                        Log::error("Error creating product: " . $productData['product']['title'] . " - " . $e->getMessage());
+                    if ($response->created()) {
+                        Log::info('Product created successfully: ' . $productData['product']['title']);
+                        $this->logProcessedRecord($record, $this->uploadedProductsPath);
+                    } else {
+                        Log::error('Failed to create product: ' . $productData['product']['title']);
                         $this->logProcessedRecord($record, $this->failedProductsPath);
                     }
+                } catch (\Exception $e) {
+                    Log::error('Error creating product: ' . $productData['product']['title'] . ' - ' . $e->getMessage());
+                    $this->logProcessedRecord($record, $this->failedProductsPath);
                 }
-            });
+            }
         } catch (UnavailableStream $e) {
             Log::error("Error reading CSV file: {$e->getMessage()}");
         } catch (Exception $e) {
             Log::error("Error processing CSV file: {$e->getMessage()}");
         }
-    }
-
-    /**
-     * Get records in chunks
-     * @throws UnavailableStream
-     * @throws Exception
-     */
-    private function processCsvInChunks($callback): void
-    {
-        $csv = Reader::createFromPath(Storage::path('products_export.csv'));
-        $csv->setHeaderOffset(0);
-
-        $stmt = (new Statement());
-        $records = $stmt->process($csv);
-        $records = collect($records);
-
-        $records->chunk(50)->each($callback);
     }
 
     /**
