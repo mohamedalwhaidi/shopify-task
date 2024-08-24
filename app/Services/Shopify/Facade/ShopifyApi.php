@@ -16,7 +16,7 @@ use Shopify\Clients\HttpResponse;
  * @method static array getProducts(?array $query = ['limit' => 50])
  * @method static PromiseInterface|Response createProduct(array $product)
  * @method static array getInventoryLocations()
- * @method static void updateInventoryLevel($locationId, $inventoryItemId, $quantity, $productId)
+ * @method static array updateInventoryLevel($locationId, $inventoryItemId, $quantity, $productId)
  * @method static void addLocation(array $location)
  * @method static void setException(Exception $exception)
  */
