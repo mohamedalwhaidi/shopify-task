@@ -15,6 +15,8 @@ use Shopify\Clients\Rest;
 use Shopify\Context;
 use Shopify\Exception\MissingArgumentException;
 use Shopify\Exception\UninitializedContextException;
+use Shopify\Rest\Admin2024_07\InventoryLevel;
+use Shopify\Rest\Admin2024_07\Location;
 
 class ShopifyApiService
 {
@@ -23,6 +25,8 @@ class ShopifyApiService
     private string $storeName;
 
     private Rest $client;
+
+    private Session $session;
 
     /**
      * @throws MissingArgumentException
@@ -44,18 +48,18 @@ class ShopifyApiService
             isPrivateApp: true
         );
 
-        $session = new Session(
+        $this->session = new Session(
             id: "offline_$this->storeName",
             shop: $this->storeName,
             isOnline: false,
             state: 'active',
         );
 
-        $session->setAccessToken($this->apiPassword);
+        $this->session->setAccessToken($this->apiPassword);
 
         $this->client = new Rest(
-            $session->getShop(),
-            $session->getAccessToken()
+            $this->session->getShop(),
+            $this->session->getAccessToken()
         );
     }
 
@@ -108,42 +112,36 @@ class ShopifyApiService
     }
 
 
-    /**
-     * @throws ConnectionException
-     */
-    public function getInventoryLocations()
+    public function getInventoryLocations(): Location|array
     {
-        $response = Http::withBasicAuth($this->apiKey, $this->apiPassword)
-            ->get("https://$this->storeName.myshopify.com/admin/locations.json");
-
-        if ($response->successful() && !empty($response->json()['locations'])) {
-            return $response->json()['locations'];
+        try {
+            return Location::all($this->session);
+        } catch (\Exception $e) {
+            Log::error('Error fetching inventory locations: ' . $e->getMessage());
+            return [];
         }
 
-        Log::error('Failed to fetch inventory locations from Shopify');
-        return [];
     }
 
-    /**
-     * @throws ConnectionException
-     */
-    public function updateInventoryLevel($locationId, $inventoryItemId, $quantity, $productId)
+
+    public function updateInventoryLevel($locationId, $inventoryItemId, $quantity, $productId): ?array
     {
-        $response = Http::withBasicAuth($this->apiKey, $this->apiPassword)
-            ->post("https://{$this->storeName}.myshopify.com/admin/inventory_levels/set.json", [
-                'location_id' => $locationId,
-                'inventory_item_id' => $inventoryItemId,
-                'available' => $quantity,
-            ]);
+        try {
+            $inventoryLevel = new InventoryLevel($this->session);
 
-        if ($response->successful()) {
-            Log::info("Inventory level updated for product ID {$productId}, item ID {$inventoryItemId} to {$quantity}");
-        } else {
-            Log::error("Failed to update inventory level for product ID {$productId}, item ID {$inventoryItemId}. Response: " . $response->body());
-            $this->logFailedProduct($productId, $inventoryItemId, $locationId, $response->body());
+            return $inventoryLevel->adjust(
+                [],
+                [
+                    'location_id' => $locationId,
+                    'inventory_item_id' => $inventoryItemId,
+                    'available_adjustment' => $quantity,
+                ]
+            );
+
+        } catch (\Exception $e) {
+            Log::error("Error updating inventory for product ID {$productId}, item ID {$inventoryItemId}: " . $e->getMessage());
+            return [];
         }
-
-        return $response->json();
     }
 
     private function logFailedProduct($productId, $inventoryItemId, $locationId, $error): void

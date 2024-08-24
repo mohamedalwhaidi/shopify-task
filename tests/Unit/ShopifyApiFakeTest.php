@@ -53,6 +53,6 @@ class ShopifyApiFakeTest extends TestCase
 
         $result = ShopifyApi::updateInventoryLevel(1, 1, 100, 1);
 
-        $this->assertTrue((bool)$result);
+        $this->assertEquals([], $result);
     }
 }

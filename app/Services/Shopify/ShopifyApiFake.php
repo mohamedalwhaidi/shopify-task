@@ -82,7 +82,7 @@ class ShopifyApiFake extends ShopifyApiService
     /**
      * @throws Exception
      */
-    public function getInventoryLocations()
+    public function getInventoryLocations(): array
     {
         if ($this->exception) {
             throw $this->exception;
@@ -94,13 +94,12 @@ class ShopifyApiFake extends ShopifyApiService
     /**
      * @throws Exception
      */
-    public function updateInventoryLevel($locationId, $inventoryItemId, $quantity, $productId): bool
+    public function updateInventoryLevel($locationId, $inventoryItemId, $quantity, $productId): ?array
     {
         if ($this->exception) {
             throw $this->exception;
         }
 
-        // Simulate a successful update
-        return true;
+        return [];
     }
 }
