@@ -89,10 +89,10 @@ class CreateShopifyProductsJobTest extends TestCase
         $job = new CreateShopifyProductsJob($records);
         $job->handle();
 
-        $products = ShopifyApi::getProducts();
+        $response = ShopifyApi::getProducts();
 
-        $this->assertCount(1, $products);
-        $this->assertEquals('Test Product', $products[0]['product']['title']);
+        $this->assertCount(1, $response['data']);
+        $this->assertEquals('Test Product', $response['data'][0]['product']['title']);
     }
 
     public function test_it_logs_errors_when_product_creation_fails()

@@ -18,10 +18,10 @@ class ShopifyApiFakeTest extends TestCase
                 'title' => 'Test Product',
             ]
         ]);
-        $products = ShopifyApi::getProducts();
+        $response = ShopifyApi::getProducts();
 
-        $this->assertCount(1, $products);
-        $this->assertEquals('Test Product', $products[0]['product']['title']);
+        $this->assertCount(1, $response['data']);
+        $this->assertEquals('Test Product', $response['data'][0]['product']['title']);
     }
 
     public function test_it_can_throw_exception_when_set()
