@@ -67,13 +67,16 @@ class ShopifyApiFake extends ShopifyApiService
     /**
      * @throws Exception
      */
-    public function getProducts(int $page = null, int $limit = null): array
+    public function getProducts(?array $query = []): array
     {
         if ($this->exception) {
             throw $this->exception;
         }
 
-        return $this->products->all();
+        return [
+            'data' => $this->products->all(),
+            'page_info' => '',
+        ];
     }
 
     /**

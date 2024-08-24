@@ -9,10 +9,11 @@ use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\HigherOrderTapProxy;
+use Shopify\Clients\HttpResponse;
 
 
 /**
- * @method static array getProducts(?int $page = null, ?int $limit = null)
+ * @method static array getProducts(?array $query = ['limit' => 50])
  * @method static PromiseInterface|Response createProduct(array $product)
  * @method static array getInventoryLocations()
  * @method static void updateInventoryLevel($locationId, $inventoryItemId, $quantity, $productId)

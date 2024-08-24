@@ -8,6 +8,13 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Psr\Http\Client\ClientExceptionInterface;
+use Shopify\Auth\FileSessionStorage;
+use Shopify\Auth\Session;
+use Shopify\Clients\Rest;
+use Shopify\Context;
+use Shopify\Exception\MissingArgumentException;
+use Shopify\Exception\UninitializedContextException;
 
 class ShopifyApiService
 {
@@ -15,40 +22,78 @@ class ShopifyApiService
     private string $apiPassword;
     private string $storeName;
 
+    private Rest $client;
+
+    /**
+     * @throws MissingArgumentException
+     */
     public function __construct()
     {
         $this->apiKey = config('services.shopify.api_key');
         $this->apiPassword = config('services.shopify.api_password');
         $this->storeName = config('services.shopify.store_name');
+
+        Context::initialize(
+            apiKey: $this->apiKey,
+            apiSecretKey: $this->apiPassword,
+            scopes: ['read_products', 'write_products', 'read_inventory', 'write_inventory'],
+            hostName: $this->storeName,
+            sessionStorage: new FileSessionStorage(),
+            apiVersion: '2024-07',
+            isEmbeddedApp: false,
+            isPrivateApp: true
+        );
+
+        $session = new Session(
+            id: "offline_$this->storeName",
+            shop: $this->storeName,
+            isOnline: false,
+            state: 'active',
+        );
+
+        $session->setAccessToken($this->apiPassword);
+
+        $this->client = new Rest(
+            $session->getShop(),
+            $session->getAccessToken()
+        );
     }
 
-    /**
-     * @throws ConnectionException
-     */
-    public function getProducts(?int $page = null, ?int $limit = null): array
+
+    public function getProducts(?array $query = ['limit' => 50]): array
     {
-        // TODO: Fix pagination and use it to get paginated products
-        $body = array_filter([
-            /*
-            * Should be page_info instead of page and i need to get page_info, but i don't have the time to search more.
+        try {
+            $response = $this->client->get(path: 'products', query: $query, tries: 3);
 
-            * page_info: A unique ID used to access a certain page of results.
-            * The page_info parameter can't be modified and must be used exactly as it appears in the link header URL.
-            */
-//                'page' => $page,
-//                'page_info' => $page,
-//                'limit' => $limit,
-        ]);
+            if ($response->getStatusCode() != 200) {
+                Log::error('Failed to fetch products from Shopify: Invalid response code ' . $response->getStatusCode());
+                return [
+                    'data' => [],
+                    'page_info' => null,
+                ];
+            }
 
-        $response = Http::withBasicAuth($this->apiKey, $this->apiPassword)
-            ->get("https://{$this->storeName}.myshopify.com/admin/products.json", $body);
+            $products = $response->getDecodedBody()['products'];
+            $pageInfo = $response->getPageInfo();
 
-        if ($response->successful()) {
-            return $response->json()['products'];
+            return [
+                'data' => $products,
+                'page_info' => $pageInfo,
+            ];
+
+        } catch (ClientExceptionInterface|UninitializedContextException $e) {
+            Log::error('Failed to fetch products from Shopify: ' . $e->getMessage());
+            return [
+                'data' => [],
+                'page_info' => null,
+            ];
+        } catch (\JsonException $e) {
+            Log::error('Failed to decode response from Shopify: ' . $e->getMessage());
+            return [
+                'data' => [],
+                'page_info' => null,
+            ];
         }
-
-        Log::error('Failed to fetch products from Shopify');
-        return [];
     }
 
 
@@ -59,7 +104,7 @@ class ShopifyApiService
     {
         return Http::withBasicAuth($this->apiKey, $this->apiPassword)
             ->retry(3, 1000)
-            ->post("https://{$this->storeName}.myshopify.com/admin/products.json", $productData);
+            ->post("https://$this->storeName.myshopify.com/admin/products.json", $productData);
     }
 
 
@@ -69,7 +114,7 @@ class ShopifyApiService
     public function getInventoryLocations()
     {
         $response = Http::withBasicAuth($this->apiKey, $this->apiPassword)
-            ->get("https://{$this->storeName}.myshopify.com/admin/locations.json");
+            ->get("https://$this->storeName.myshopify.com/admin/locations.json");
 
         if ($response->successful() && !empty($response->json()['locations'])) {
             return $response->json()['locations'];
